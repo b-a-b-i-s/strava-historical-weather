@@ -15,10 +15,10 @@ Small, standalone Python CLI for adding **historical Open-Meteo weather** to you
 
 ## Installation
 
-Requires Python 3.11+ and optional [`uv`](https://docs.astral.sh/uv/).
+Requires Git, Python 3.11+ and optionally [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-unzip strava-historical-weather-v4.zip
+git clone https://github.com/b-a-b-i-s/strava-historical-weather.git
 cd strava-historical-weather
 cp .env.example .env
 ```
