@@ -8,6 +8,7 @@ Small, standalone Python CLI for adding **historical Open-Meteo weather** to you
 - Hourly temperature, feels-like, humidity, wind direction/speed, precipitation (from **the preceding hour**), and weather condition.
 - **Historical AQI since 2013 where CAMS data exists**, using Open-Meteo Air Quality API. If missing, AQI is simply omitted; use `--no-aqi` to disable those requests.
 - **Dry run by default**; `--apply` is required to modify an activity.
+- Defaults to the activity name and a weather icon in the title (**no temperature**); use `--include-title-temperature` to add it.
 - Prepends the weather sentence before your existing description, keeping existing notes intact. `--refresh` replaces this tool's managed prefix and renews previously generated title suffixes.
 - Stores generated titles **and the exact managed description prefix** in `.private/title-state.json` on `--apply`, so refreshes don't duplicate text. If another service changes the title or prefix afterward, the tool protects the edits.
 - Refreshes Strava OAuth tokens automatically and stores them locally.
@@ -98,10 +99,18 @@ Strautomator **does not have one fixed weather format**: its automation recipes 
 **Default title:**
 
 ```text
-${name} ${weather.icon} ${weather.temperature}
+${name} ${weather.icon}
 ```
 
-Example (illustrative): `Morning Run 🌤️ 18°C`.
+Example (illustrative): `Morning Run 🌤️`.
+
+**Include temperature in the default title (optional, default: false):**
+
+```bash
+uv run python strava_weather.py backfill --activity-id 1234567890 --include-title-temperature
+```
+
+This produces a title such as `Morning Run 🌤️ 18°C`. Add `--apply` after reviewing the preview. The flag only affects the default title: if you provide a custom `--title-template`, the template controls whether temperature appears.
 
 **Default description (prepended):**
 
@@ -142,6 +151,8 @@ uv run python strava_weather.py backfill --activity-id 1234567890 \
 ```
 
 For a multi-line custom description, use literal newlines or escaped `\n` in `--description-template`. For Fahrenheit and mph, add `--temp-unit f --wind-unit mph`. The default is **°C** and **m/s**.
+
+If you already used the previous default title with temperature, run with `--refresh` to replace the managed title suffix with the new default.
 
 Run with no `--apply` first to inspect the **new title and description**. When you're happy, add `--apply`.
 

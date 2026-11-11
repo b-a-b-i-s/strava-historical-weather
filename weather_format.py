@@ -20,7 +20,7 @@ WEATHER_FIELDS = (
     "aqiIcon", "moon", "cloudCover", "time",
 )
 
-DEFAULT_TITLE_TEMPLATE = "${name} ${weather.icon} ${weather.temperature}"
+DEFAULT_TITLE_TEMPLATE = "${name} ${weather.icon}"
 DEFAULT_DESCRIPTION_TEMPLATE = (
     "${weather.summary}, ${weather.temperature}, "
     "Feels like ${weather.feelsLike}, Humidity ${weather.humidity}, "

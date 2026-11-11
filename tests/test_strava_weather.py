@@ -139,12 +139,19 @@ class ParsingTests(unittest.TestCase):
             with patch.object(sw, "TITLE_STATE_FILE", Path(temp) / "title-state.json"):
                 self.assertEqual(sw.process_activity(client, {"id": 2}, args), "updated")
                 initial = client.detail["name"]
-                self.assertEqual(initial, "Afternoon Ride ☀️ 20°C")
+                self.assertEqual(initial, "Afternoon Ride ☀️")
                 self.assertEqual(sw.process_activity(client, {"id": 2}, args), "skipped")
                 args.refresh = True
                 self.assertEqual(sw.process_activity(client, {"id": 2}, args), "skipped")
                 self.assertEqual(client.detail["name"], initial)
                 self.assertEqual(len(client.updates), 1)
+                # Enable temperature, then disable it: refresh must replace the managed suffix.
+                args.include_title_temperature = True
+                self.assertEqual(sw.process_activity(client, {"id": 2}, args), "updated")
+                self.assertEqual(client.detail["name"], "Afternoon Ride ☀️ 20°C")
+                args.include_title_temperature = False
+                self.assertEqual(sw.process_activity(client, {"id": 2}, args), "updated")
+                self.assertEqual(client.detail["name"], "Afternoon Ride ☀️")
                 # External changes to a title are preserved even while refreshing weather.
                 client.detail["name"] = "My manually edited ride"
                 mock_weather.return_value["temperature_2m"] = 21
@@ -232,7 +239,29 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(description, "Cool, cloudy, 15°C, Feels like 15°C, Humidity 79%, "
                          "Wind 1 m/s from N, Precipitation dry, AQI 1 🟡")
         self.assertNotIn("Open-Meteo.com", description)
-        self.assertIn("15°C", title)
+        self.assertEqual(title, "Morning Run ☁️")
+
+    @patch("strava_weather.air_quality_at", return_value={})
+    @patch("strava_weather.weather_at")
+    def test_opt_in_title_temperature_and_custom_title(self, mock_weather, _mock_aqi):
+        mock_weather.return_value = {"temperature_2m": 15, "weather_code": 3}
+        activity = {"name": "Morning Run", "start_date": "2020-05-04T10:00:00Z",
+                    "start_latlng": [38, 23], "elapsed_time": 3600}
+        default, _ = sw.make_weather_payload(activity, "best_match")
+        with_temp, _ = sw.make_weather_payload(activity, "best_match", include_title_temperature=True)
+        custom, _ = sw.make_weather_payload(activity, "best_match",
+                                            title_template="${name}: ${weather.summary}",
+                                            include_title_temperature=True)
+        self.assertEqual(default, "Morning Run ☁️")
+        self.assertEqual(with_temp, "Morning Run ☁️ 15°C")
+        self.assertEqual(custom, "Morning Run: Cool, cloudy")
+
+    def test_title_temperature_cli_flag_defaults_off(self):
+        parser = sw.make_parser()
+        default = parser.parse_args(["backfill", "--activity-id", "123"])
+        enabled = parser.parse_args(["backfill", "--activity-id", "123", "--include-title-temperature"])
+        self.assertFalse(default.include_title_temperature)
+        self.assertTrue(enabled.include_title_temperature)
 
     @patch("strava_weather.air_quality_at", return_value={})
     @patch("strava_weather.weather_at")

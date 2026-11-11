@@ -326,7 +326,7 @@ def local_time(utc_datetime: datetime, activity: dict) -> datetime:
 def make_weather_payload(
     activity: dict, model: str, title_template: str = DEFAULT_TITLE_TEMPLATE,
     description_template: str | None = None, temp_unit: str = "c", wind_unit: str = "m/s",
-    fetch_aqi: bool = True,
+    fetch_aqi: bool = True, include_title_temperature: bool = False,
 ) -> tuple[str, str]:
     """Build both activity title and description, fetching each weather sample only once."""
     start = parse_utc(activity["start_date"])
@@ -355,6 +355,9 @@ def make_weather_payload(
         "weather.mid": None,
     }
     name = activity.get("name") or "Untitled"
+    # The opt-in flag affects only the default title; custom templates remain authoritative.
+    if include_title_temperature and title_template == DEFAULT_TITLE_TEMPLATE:
+        title_template += " ${weather.temperature}"
     title = render_template(title_template, name, weather).strip()
     if not title or len(title) > 255:
         raise ToolError("Generated activity title is empty or exceeds 255 characters.")
@@ -465,6 +468,7 @@ def process_activity(strava: Strava, item: dict, args: argparse.Namespace) -> st
             temp_unit=getattr(args, "temp_unit", "c"),
             wind_unit=getattr(args, "wind_unit", "m/s"),
             fetch_aqi=not getattr(args, "no_aqi", False),
+            include_title_temperature=getattr(args, "include_title_temperature", False),
         )
         merged = merge_description(existing, block, args.refresh,
                                    old_state.get("description_prefix") if old_state else None)
@@ -553,7 +557,9 @@ def make_parser() -> argparse.ArgumentParser:
     batch.add_argument("--max-pages", type=int, default=10, help="Maximum Strava listing pages, 100/page (default: 10)")
     batch.add_argument("--model", choices=["best_match", "era5", "era5_land", "cerra"], default="best_match")
     batch.add_argument("--title-template", default=DEFAULT_TITLE_TEMPLATE,
-                       help="Strautomator-style tags, e.g. '${name} ${weather.icon} ${weather.temperature}'")
+                       help="Custom title tags, e.g. '${name} ${weather.icon} ${weather.temperature}'")
+    batch.add_argument("--include-title-temperature", action="store_true", default=False,
+                       help="Include temperature in the default title (default: false; custom title templates are unaffected)")
     batch.add_argument("--description-template", help="Custom weather block body (supports escaped \\n or literal newlines)")
     batch.add_argument("--temp-unit", choices=["c", "f"], default="c", help="Temperature unit (default: Celsius)")
     batch.add_argument("--wind-unit", choices=["kph", "mph", "m/s"], default="m/s", help="Wind speed unit (default: m/s)")
