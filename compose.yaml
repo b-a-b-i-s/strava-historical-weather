@@ -1,0 +1,8 @@
+services:
+  weather:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./.private:/app/.private
+    read_only: true
